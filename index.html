@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; font-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0d12" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="SafeBase" />
+  <meta name="format-detection" content="telephone=no" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icon-180.png" />
+  <link rel="icon" href="icon-192.png" />
+  <link rel="stylesheet" href="styles.css?v=5.6.5" />
+  <title>SafeBase v5.6.5</title>
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <div class="brand-wrap">
+        <img class="brand-mark-img" src="safebase-logo.png" alt="" aria-hidden="true" />
+        <div>
+          <div class="brand">SafeBase</div>
+          <div class="subtitle" id="statusText">Lokaler Tresor</div>
+        </div>
+      </div>
+      <button id="lockBtn" class="icon-btn hidden" title="Sperren" aria-label="Tresor sperren">🔒</button>
+    </header>
+
+    <main>
+      <section id="setupView" class="panel auth-panel hidden">
+        <div class="auth-brand"><img src="safebase-logo.png" alt="SafeBase" /></div>
+        <h1>SafeBase einrichten</h1>
+        <p class="muted">Deine Daten bleiben lokal in diesem Browser und werden vor dem Speichern verschlüsselt.</p>
+        <label>6-stellige Master-PIN
+          <input id="setupPassword" class="pin-input" type="password" inputmode="numeric" autocomplete="off" pattern="[0-9]{6}" minlength="6" maxlength="6" placeholder="••••••" />
+        </label>
+        <label>Master-PIN wiederholen
+          <input id="setupPassword2" class="pin-input" type="password" inputmode="numeric" autocomplete="off" pattern="[0-9]{6}" minlength="6" maxlength="6" placeholder="••••••" />
+        </label>
+        <button id="setupBtn" class="primary">Tresor erstellen</button>
+        <p class="warning">Wichtig: Die 6-stellige PIN wird nicht gespeichert und kann nicht zurückgesetzt werden. Verwende eine zufällige PIN.</p>
+      </section>
+
+      <section id="pinMigrationView" class="panel auth-panel hidden">
+        <div class="auth-brand"><img src="safebase-logo.png" alt="SafeBase" /></div>
+        <h1>Auf 6-stellige PIN umstellen</h1>
+        <p class="muted">Einmalige Umstellung für einen vorhandenen SafeBase-Tresor. Danach meldest du dich nur noch mit deiner 6-stelligen PIN an.</p>
+        <label>Bisheriges Master-Passwort
+          <input id="legacyMasterPassword" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="256" placeholder="Bisheriges Master-Passwort" />
+        </label>
+        <label>Neue 6-stellige PIN
+          <input id="legacyNewPin" class="pin-input" type="password" inputmode="numeric" autocomplete="off" pattern="[0-9]{6}" minlength="6" maxlength="6" placeholder="••••••" />
+        </label>
+        <label>PIN wiederholen
+          <input id="legacyNewPin2" class="pin-input" type="password" inputmode="numeric" autocomplete="off" pattern="[0-9]{6}" minlength="6" maxlength="6" placeholder="••••••" />
+        </label>
+        <button id="migratePinBtn" class="primary">PIN aktivieren</button>
+        <button id="migrationResetBtn" class="danger ghost">Lokalen Tresor löschen</button>
+        <p class="warning">Diese Abfrage des alten Master-Passworts erscheint nur einmal für die Umstellung.</p>
+      </section>
+
+      <section id="unlockView" class="panel auth-panel hidden">
+        <div class="auth-brand"><img src="safebase-logo.png" alt="SafeBase" /></div>
+        <h1>Tresor entsperren</h1>
+        <p class="muted">Gib deine 6-stellige Master-PIN ein.</p>
+        <label>6-stellige PIN
+          <input id="unlockPassword" class="pin-input" type="password" inputmode="numeric" autocomplete="off" pattern="[0-9]{6}" minlength="6" maxlength="6" placeholder="••••••" />
+        </label>
+        <button id="unlockBtn" class="primary">Entsperren</button>
+        <button id="resetBtn" class="danger ghost">Lokalen Tresor löschen</button>
+      </section>
+
+      <section id="twoFactorView" class="panel auth-panel hidden">
+        <div class="auth-brand"><img src="safebase-logo.png" alt="SafeBase" /></div>
+        <h1>Zweiter Faktor</h1>
+        <p class="muted">Öffne deine Authenticator-App und gib den aktuellen 6-stelligen SafeBase-Code ein.</p>
+        <label>Authenticator-Code
+          <input id="twoFactorCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="000000" />
+        </label>
+        <button id="verifyTwoFactorBtn" class="primary">Code bestätigen</button>
+        <button id="useRecoveryBtn" class="secondary">Recovery-Code verwenden</button>
+        <div id="twoFactorRecoveryWrap" class="hidden recovery-unlock">
+          <label>Recovery-Code
+            <input id="twoFactorRecoveryCode" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="32" placeholder="XXXX-XXXX-XXXX-XXXX" />
+          </label>
+          <button id="verifyRecoveryBtn" class="secondary">Recovery-Code bestätigen</button>
+        </div>
+        <button id="cancelTwoFactorBtn" class="ghost">Zurück</button>
+      </section>
+
+      <section id="vaultView" class="hidden">
+        <div class="stats-grid">
+          <div class="stat"><span id="pwCount">0</span><small>Passwörter</small></div>
+          <div class="stat"><span id="noteCount">0</span><small>Notizen</small></div>
+          <div class="stat"><span id="externalFileCount">0</span><small>Dateien</small></div>
+        </div>
+
+        <nav class="tabs" aria-label="Bereiche">
+          <button class="tab active" data-tab="passwords">Passwörter</button>
+          <button class="tab" data-tab="notes">Notizen</button>
+          <button class="tab" data-tab="external">Dateien</button>
+          <button class="tab" data-tab="generator">Generator</button>
+          <button class="tab" data-tab="settings">Backup</button>
+        </nav>
+
+        <section id="tab-passwords" class="tabpage">
+          <div class="section-head">
+            <input id="searchPasswords" type="search" placeholder="Passwörter durchsuchen" />
+            <button id="addPasswordBtn" class="primary compact">+ Neu</button>
+          </div>
+          <div id="passwordList" class="card-list"></div>
+        </section>
+
+        <section id="tab-notes" class="tabpage hidden">
+          <div class="section-head">
+            <input id="searchNotes" type="search" placeholder="Notizen durchsuchen" />
+            <button id="addNoteBtn" class="primary compact">+ Neu</button>
+          </div>
+          <div id="noteList" class="card-list"></div>
+        </section>
+
+
+        <section id="tab-external" class="tabpage hidden">
+          <div class="storage-page-head">
+            <div>
+              <h2>Speicher</h2>
+              <p class="muted small">Deine Fotos und Dokumente bleiben verschlüsselt in einer <strong>.safebase</strong>-Tresordatei.</p>
+            </div>
+            <span id="storageVaultBadge" class="storage-status-badge" data-state="closed">Geschlossen</span>
+          </div>
+
+          <div class="panel storage-vault-panel">
+            <div class="storage-vault-summary">
+              <div class="storage-vault-icon">🔐</div>
+              <div class="storage-vault-main">
+                <div class="storage-eyebrow">Tresordatei</div>
+                <div id="externalVaultName" class="storage-vault-name">Keine Tresordatei geöffnet</div>
+                <p id="externalVaultStatus" class="storage-vault-status" data-state="info">Erstelle eine neue Tresordatei oder öffne eine vorhandene.</p>
+              </div>
+            </div>
+
+            <div class="storage-vault-stats" aria-label="Tresorübersicht">
+              <div><strong id="externalVaultItemCount">0</strong><span>Dateien</span></div>
+              <div><strong id="externalVaultSize">0 B</strong><span>Belegt</span></div>
+              <div><strong id="externalVaultProtection">Passkey</strong><span>Schutz</span></div>
+            </div>
+
+            <div class="external-vault-actions storage-open-actions">
+              <button id="newExternalVaultBtn" type="button" class="primary">+ Neue Tresordatei</button>
+              <label class="secondary upload-label">Tresordatei öffnen<input id="externalVaultInput" type="file" accept=".safebase,application/octet-stream" hidden /></label>
+            </div>
+            <div id="externalDraftRecovery" class="security-warning-card compact-warning-card hidden" role="status" aria-label="Wiederherstellungsentwurf">
+              <div class="security-warning-section">
+                <div class="security-warning-icon" aria-hidden="true">↩️</div>
+                <div>
+                  <h3>Wiederherstellbarer Entwurf</h3>
+                  <p id="externalDraftRecoveryText">Ein verschlüsselter Entwurf wurde lokal gesichert.</p>
+                  <div class="dialog-actions draft-recovery-actions">
+                    <button id="restoreExternalDraftBtn" type="button" class="primary compact">Entwurf öffnen</button>
+                    <button id="discardExternalDraftBtn" type="button" class="secondary compact">Verwerfen</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="security-warning-card storage-security-note" role="note" aria-label="Wichtige Sicherheitshinweise">
+              <div class="security-warning-section">
+                <div class="security-warning-icon" aria-hidden="true">🛡️</div>
+                <div>
+                  <h3>Wichtiger Sicherheitshinweis</h3>
+                  <p>Deine Tresordatei ist an deinen Passkey/Sicherheitsschlüssel gebunden. <strong>Bewahre deinen Sicherheitsschlüssel sicher auf.</strong> Ohne einen passenden Schlüssel kann der Tresor möglicherweise <strong>nicht mehr geöffnet werden.</strong></p>
+                </div>
+              </div>
+              <div class="security-warning-divider" aria-hidden="true"></div>
+              <div class="security-warning-section">
+                <div class="security-warning-icon" aria-hidden="true">💾</div>
+                <div>
+                  <h3>Regelmäßig sichern!</h3>
+                  <p>Erstelle regelmäßig eine Sicherung deiner <strong>.safebase</strong>-Datei und bewahre sie an einem sicheren Ort auf (z. B. USB-Stick, externe Festplatte).</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="externalVaultWorkspace" class="hidden">
+            <div class="panel storage-files-panel">
+              <div class="storage-list-head">
+                <div>
+                  <h2>Gespeicherte Dateien</h2>
+                  <p id="externalListSummary" class="muted small">0 Dateien</p>
+                </div>
+                <label class="primary upload-label compact storage-add-button">+ Hinzufügen<input id="externalAddFilesInput" type="file" multiple hidden /></label>
+              </div>
+
+              <input id="searchExternalFiles" class="storage-search" type="search" placeholder="Dateien durchsuchen …" autocomplete="off" />
+
+              <div class="storage-controls">
+                <div class="storage-filter-chips" role="group" aria-label="Dateityp filtern">
+                  <button type="button" class="storage-filter-chip active" data-external-filter="all">Alle</button>
+                  <button type="button" class="storage-filter-chip" data-external-filter="images">Fotos</button>
+                  <button type="button" class="storage-filter-chip" data-external-filter="documents">Dokumente</button>
+                </div>
+                <select id="externalSortSelect" class="storage-sort" aria-label="Dateien sortieren">
+                  <option value="newest">Neueste</option>
+                  <option value="name">Name</option>
+                  <option value="size">Größe</option>
+                </select>
+              </div>
+
+              <div id="externalFileList" class="storage-file-list"></div>
+
+              <div class="storage-bottom-actions">
+                <button id="saveExternalVaultBtn" type="button" class="primary">🔐 In Dateien sichern</button>
+                <button id="closeExternalVaultBtn" type="button" class="secondary">Tresor schließen</button>
+              </div>
+              <p class="muted small storage-save-note">Auf dem iPhone kannst du die verschlüsselte Tresordatei z. B. unter <strong>Auf meinem iPhone → SafeBase</strong> speichern. Maximal 100 MB pro Datei und 300 MB pro Tresor.</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="tab-generator" class="tabpage hidden">
+          <div class="panel inset">
+            <h2>Passwortgenerator</h2>
+            <label>Länge: <strong id="lengthValue">24</strong>
+              <input id="lengthSlider" type="range" min="12" max="64" value="24" />
+            </label>
+            <div class="check-grid">
+              <label><input id="useUpper" type="checkbox" checked /> Großbuchstaben</label>
+              <label><input id="useLower" type="checkbox" checked /> Kleinbuchstaben</label>
+              <label><input id="useNumbers" type="checkbox" checked /> Zahlen</label>
+              <label><input id="useSymbols" type="checkbox" checked /> Sonderzeichen</label>
+            </div>
+            <div class="generated-row">
+              <input id="generatedPassword" readonly />
+              <button id="copyGeneratedBtn" class="secondary compact">Kopieren</button>
+            </div>
+            <button id="generateBtn" class="primary">Neues Passwort erzeugen</button>
+          </div>
+        </section>
+
+        <section id="tab-settings" class="tabpage hidden">
+          <div class="panel inset">
+            <h2>Passkey + verschlüsselte Backup-Datei</h2>
+            <p class="muted">Bei jedem neuen Backup entstehen <strong>zwei zusammengehörige Teile</strong>: ein neuer Passkey auf deinem Sicherheitsschlüssel/Passkey-Anbieter und eine AES-256-GCM-verschlüsselte <strong>.safebasebackup</strong>-Datei. Nach der Passkey-Erstellung öffnet SafeBase direkt den zweiten Schritt zum Speichern. Das funktioniert auf <strong>iPhone/iPad, Android, Windows-PC und Mac</strong>. Für die Wiederherstellung brauchst du beides.</p>
+            <button id="exportBtn" class="primary">Passkey + verschlüsselte Datei erstellen</button>
+            <button id="retryBackupSaveBtn" class="secondary hidden" type="button">Verschlüsselte Datei speichern / teilen</button>
+            <p id="backupPairStatus" class="backup-pair-status" data-state="info">Noch kein neues Backup erstellt.</p>
+            <label class="secondary upload-label">Backup importieren<input id="importInput" type="file" accept=".safebasebackup,application/octet-stream,application/json,.json" hidden /></label>
+            <div class="security-warning-card compact-warning-card backup-security-note" role="note" aria-label="Backup-Hinweis">
+              <div class="security-warning-section">
+                <div class="security-warning-icon" aria-hidden="true">💾</div>
+                <div>
+                  <h3>Passkey und Datei gehören zusammen!</h3>
+                  <p>Der <strong>Passkey selbst wird nicht als Datei exportiert</strong>; sein privater Schlüssel bleibt geschützt auf dem gewählten Sicherheitsschlüssel bzw. Passkey-Anbieter. Zusätzlich erhältst du die verschlüsselte <strong>.safebasebackup</strong>-Datei. Ohne passenden Passkey <strong>oder</strong> ohne diese Datei ist keine Wiederherstellung möglich. Ältere <strong>.json</strong>-Backups können weiterhin importiert werden.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="panel inset">
+            <h2>Sicherheit</h2>
+            <p id="securityStatus" class="muted small">AES-256-GCM • Security Hardened v5 • externer verschlüsselter Dateitresor</p>
+            <label>Automatisch sperren nach
+              <select id="autoLockSelect">
+                <option value="1">1 Minute</option>
+                <option value="5" selected>5 Minuten</option>
+                <option value="15">15 Minuten</option>
+                <option value="30">30 Minuten</option>
+              </select>
+            </label>
+            <button id="changePasswordBtn" class="secondary">Master-PIN ändern</button>
+            <div class="security-warning-card settings-security-note" role="note" aria-label="Wichtige Sicherheitshinweise">
+              <div class="security-warning-section">
+                <div class="security-warning-icon" aria-hidden="true">🛡️</div>
+                <div>
+                  <h3>Wichtiger Sicherheitshinweis</h3>
+                  <p>Deine Tresordatei ist an deinen Passkey/Sicherheitsschlüssel gebunden. <strong>Bewahre deinen Sicherheitsschlüssel sicher auf.</strong> Ohne einen passenden Schlüssel kann der Tresor möglicherweise <strong>nicht mehr geöffnet werden.</strong></p>
+                </div>
+              </div>
+              <div class="security-warning-divider" aria-hidden="true"></div>
+              <div class="security-warning-section">
+                <div class="security-warning-icon" aria-hidden="true">💾</div>
+                <div>
+                  <h3>Regelmäßig sichern!</h3>
+                  <p>Erstelle regelmäßig eine Sicherung deiner <strong>.safebase</strong>-Datei und bewahre sie an einem sicheren Ort auf (z. B. USB-Stick, externe Festplatte).</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="panel inset">
+            <h2>Zwei-Faktor-Authentifizierung</h2>
+            <p class="muted">Zusätzlicher TOTP-Code aus einer Authenticator-App nach der 6-stelligen PIN.</p>
+            <p id="twoFactorStatus" class="security-pill">Nicht aktiviert</p>
+            <button id="enable2FABtn" class="primary">2FA einrichten</button>
+            <button id="regenerateRecoveryBtn" class="secondary hidden">Recovery-Codes erneuern</button>
+            <button id="disable2FABtn" class="danger ghost hidden">2FA deaktivieren</button>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="passwordDialog">
+    <form method="dialog" id="passwordForm" class="dialog-form">
+      <h2 id="passwordDialogTitle">Passwort</h2>
+      <input id="passwordId" type="hidden" />
+      <label>Name<input id="entryName" required maxlength="120" /></label>
+      <label>Benutzername<input id="entryUsername" maxlength="200" autocomplete="off" /></label>
+      <label>Passwort
+        <div class="field-row"><input id="entryPassword" type="password" required maxlength="500" autocomplete="off" /><button id="toggleEntryPassword" type="button" class="icon-btn">👁️</button></div>
+      </label>
+      <label>Website<input id="entryWebsite" inputmode="url" maxlength="300" /></label>
+      <label>Notiz<textarea id="entryNote" rows="4" maxlength="3000"></textarea></label>
+      <div class="dialog-actions"><button type="button" value="cancel" class="secondary">Abbrechen</button><button id="savePasswordBtn" value="default" class="primary">Speichern</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="noteDialog">
+    <form method="dialog" id="noteForm" class="dialog-form">
+      <h2 id="noteDialogTitle">Notiz</h2>
+      <input id="noteId" type="hidden" />
+      <label>Titel<input id="noteTitle" required maxlength="160" /></label>
+      <label>Inhalt<textarea id="noteBody" rows="10" maxlength="12000"></textarea></label>
+      <div class="dialog-actions"><button type="button" value="cancel" class="secondary">Abbrechen</button><button id="saveNoteBtn" value="default" class="primary">Speichern</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="changePasswordDialog">
+    <form method="dialog" id="changePasswordForm" class="dialog-form">
+      <h2>Master-PIN ändern</h2>
+      <label>Aktuelle 6-stellige PIN<input id="currentPassword" class="pin-input" type="password" required inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="off" /></label>
+      <label>Neue 6-stellige PIN<input id="newPassword" class="pin-input" type="password" required inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="off" /></label>
+      <label>Neue PIN wiederholen<input id="newPassword2" class="pin-input" type="password" required inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="off" /></label>
+      <div class="dialog-actions"><button type="button" value="cancel" class="secondary">Abbrechen</button><button id="confirmChangePassword" value="default" class="primary">Ändern</button></div>
+    </form>
+  </dialog>
+
+
+  <dialog id="twoFactorSetupDialog">
+    <form method="dialog" id="twoFactorSetupForm" class="dialog-form">
+      <h2>2FA einrichten</h2>
+      <p class="muted small">Füge in deiner Authenticator-App ein neues Konto hinzu und trage diesen Setup-Schlüssel manuell ein. Typ: zeitbasiert (TOTP).</p>
+      <div class="secret-box">
+        <small>Setup-Schlüssel</small>
+        <code id="twoFactorSecretDisplay" class="secret-code"></code>
+        <button id="copyTwoFactorSecret" type="button" class="secondary compact">Schlüssel kopieren</button>
+      </div>
+      <label class="hidden">TOTP-URI<input id="twoFactorUriDisplay" readonly /></label>
+      <label>Master-PIN bestätigen
+        <input id="twoFactorSetupPassword" class="pin-input" type="password" required inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="off" />
+      </label>
+      <label>Aktueller 6-stelliger Code
+        <input id="twoFactorSetupCode" type="text" required inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="000000" />
+      </label>
+      <div class="dialog-actions"><button type="button" value="cancel" class="secondary">Abbrechen</button><button value="default" class="primary">2FA aktivieren</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="recoveryCodesDialog">
+    <div class="dialog-form">
+      <h2>Recovery-Codes speichern</h2>
+      <p class="warning">Jeder Code funktioniert nur einmal. Bewahre diese Codes außerhalb von SafeBase sicher auf. Nach dem Schließen werden sie nicht erneut angezeigt.</p>
+      <textarea id="recoveryCodesText" class="recovery-codes" rows="10" readonly spellcheck="false"></textarea>
+      <div class="dialog-actions"><button id="copyRecoveryCodes" type="button" class="secondary">Alle kopieren</button><button id="closeRecoveryCodes" type="button" class="primary">Ich habe sie gespeichert</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="twoFactorManageDialog">
+    <form method="dialog" id="twoFactorManageForm" class="dialog-form">
+      <h2 id="twoFactorManageTitle">2FA verwalten</h2>
+      <input id="twoFactorManageAction" type="hidden" />
+      <p class="muted small">Bestätige die Änderung mit deiner 6-stelligen Master-PIN und einem aktuellen Authenticator- oder Recovery-Code.</p>
+      <label>Master-PIN
+        <input id="twoFactorManagePassword" class="pin-input" type="password" required inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="off" />
+      </label>
+      <label>Authenticator- oder Recovery-Code
+        <input id="twoFactorManageCode" type="text" required autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="32" placeholder="000000 oder Recovery-Code" />
+      </label>
+      <div class="dialog-actions"><button type="button" value="cancel" class="secondary">Abbrechen</button><button value="default" class="primary">Bestätigen</button></div>
+    </form>
+  </dialog>
+
+
+  <dialog id="backupPasskeyNameDialog">
+    <form method="dialog" id="backupPasskeyNameForm" class="dialog-form">
+      <h2>Passkey + Backup-Datei erstellen</h2>
+      <p class="muted small">SafeBase erstellt zuerst einen <strong>neuen Passkey</strong> und verschlüsselt anschließend die <strong>.safebasebackup-Datei</strong>. Danach öffnet automatisch Schritt 2, damit du die Datei auf dem Gerät speicherst oder auf Handys über das Teilen-Menü an „Dateien“/„Downloads“ übergibst. Beide bekommen denselben Namen. Der private Passkey bleibt auf deinem Sicherheitsschlüssel/Passkey-Anbieter und wird nicht in die Datei kopiert.</p>
+      <label>Name
+        <input id="backupPasskeyNameInput" type="text" required maxlength="64" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="z. B. SafeBase-Backup-iPhone" />
+      </label>
+      <div class="dialog-actions"><button type="button" value="cancel" class="secondary">Abbrechen</button><button value="default" class="primary">Passkey erstellen &amp; Datei verschlüsseln</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="backupSaveDialog">
+    <div class="dialog-form backup-save-dialog-form">
+      <h2>Schritt 2/2: Backup-Datei speichern</h2>
+      <p class="muted small">Dein Passkey wurde erstellt. Jetzt muss die dazugehörige verschlüsselte Datei auf deinem Gerät gespeichert werden.</p>
+      <div class="backup-save-file"><span>Datei</span><strong id="backupSaveFileName">SafeBase-Backup.safebasebackup</strong></div>
+      <p id="backupSaveDeviceHint" class="muted small"></p>
+      <div class="security-warning-card compact-warning-card" role="note">
+        <div class="security-warning-section"><div class="security-warning-icon" aria-hidden="true">🔑</div><div><h3>Für die Wiederherstellung brauchst du beides</h3><p>Bewahre den passenden Passkey/Sicherheitsschlüssel und diese <strong>.safebasebackup</strong>-Datei sicher auf.</p></div></div>
+      </div>
+      <div class="dialog-actions backup-save-actions">
+        <button id="backupSaveLaterBtn" type="button" class="secondary">Später</button>
+        <button id="backupDirectDownloadBtn" type="button" class="secondary">Direkter Download</button>
+        <button id="backupSaveNowBtn" type="button" class="primary">Auf Gerät speichern</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="backupRestorePinDialog">
+    <form method="dialog" id="backupRestorePinForm" class="dialog-form">
+      <h2>Neue lokale Master-PIN</h2>
+      <p class="muted small">Das Backup wurde bereits mit deinem Passkey entschlüsselt. Lege jetzt eine neue 6-stellige PIN fest, mit der der wiederhergestellte lokale SafeBase-Tresor geschützt wird. Diese PIN schützt nicht die Backup-Datei.</p>
+      <label>Neue Master-PIN
+        <input id="backupRestorePin" class="pin-input" type="password" required inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="new-password" />
+      </label>
+      <label>PIN wiederholen
+        <input id="backupRestorePin2" class="pin-input" type="password" required inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="new-password" />
+      </label>
+      <div class="dialog-actions"><button type="button" value="cancel" class="secondary">Abbrechen</button><button value="default" class="primary">Tresor wiederherstellen</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="backupCredentialDialog">
+    <form method="dialog" id="backupCredentialForm" class="dialog-form">
+      <h2 id="backupCredentialTitle">Backup entsperren</h2>
+      <p id="backupCredentialHint" class="muted small">Gib die PIN oder das Passwort dieses Backups ein.</p>
+      <label>Backup-Zugang
+        <input id="backupCredentialInput" type="password" required maxlength="256" autocomplete="off" autocapitalize="none" spellcheck="false" />
+      </label>
+      <div class="dialog-actions"><button type="button" value="cancel" class="secondary">Abbrechen</button><button value="default" class="primary">Backup prüfen</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="externalVaultNameDialog">
+    <form method="dialog" id="externalVaultNameForm" class="dialog-form">
+      <h2>Passkey & Tresor benennen</h2>
+      <p class="muted small">Der gleiche Name wird für den neuen Passkey und für die <strong>.safebase</strong>-Datei verwendet. So erkennst du sofort, welcher Passkey zu welchem Tresor gehört.</p>
+      <label>Name
+        <input id="externalVaultNameInput" type="text" required maxlength="64" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="z. B. SafeBase-Privat" />
+      </label>
+      <p class="muted small">Beispiel: Passkey <strong>SafeBase-Privat</strong> → Datei <strong>SafeBase-Privat.safebase</strong></p>
+      <div class="dialog-actions"><button type="button" value="cancel" class="secondary">Abbrechen</button><button value="default" class="primary">Passkey erstellen</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="externalVaultPasswordDialog">
+    <form method="dialog" id="externalVaultPasswordForm" class="dialog-form">
+      <h2 id="externalVaultPasswordTitle">Ältere Tresordatei</h2>
+      <p id="externalVaultPasswordHint" class="muted small"></p>
+      <label>Altes Tresordatei-Passwort
+        <input id="externalVaultPassword" type="password" required minlength="16" maxlength="256" autocomplete="off" autocapitalize="none" spellcheck="false" />
+      </label>
+      <label id="externalVaultPasswordConfirmWrap">Passwort wiederholen
+        <input id="externalVaultPasswordConfirm" type="password" minlength="16" maxlength="256" autocomplete="off" autocapitalize="none" spellcheck="false" />
+      </label>
+      <div class="dialog-actions"><button type="button" value="cancel" class="secondary">Abbrechen</button><button id="externalVaultPasswordSubmit" value="default" class="primary">Altes Passwort bestätigen</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="externalItemMenuDialog" class="storage-action-dialog">
+    <div class="storage-action-sheet">
+      <div class="storage-action-head">
+        <div class="storage-action-icon" id="externalMenuIcon">📄</div>
+        <div class="storage-action-title-wrap">
+          <strong id="externalMenuTitle">Datei</strong>
+          <span id="externalMenuMeta" class="muted small"></span>
+        </div>
+      </div>
+      <div class="storage-action-list">
+        <button id="externalMenuOpenBtn" type="button">Öffnen</button>
+        <button id="externalMenuExportBtn" type="button">Entschlüsselt exportieren</button>
+        <button id="externalMenuRenameBtn" type="button">Umbenennen</button>
+        <button id="externalMenuInfoBtn" type="button">Informationen</button>
+        <button id="externalMenuDeleteBtn" type="button" class="storage-action-danger">Löschen</button>
+      </div>
+      <button id="externalMenuCancelBtn" type="button" class="secondary storage-action-cancel">Abbrechen</button>
+    </div>
+  </dialog>
+
+  <dialog id="externalRenameDialog">
+    <form method="dialog" id="externalRenameForm" class="dialog-form">
+      <h2>Datei umbenennen</h2>
+      <label>Neuer Dateiname<input id="externalRenameInput" required maxlength="500" autocomplete="off" /></label>
+      <div class="dialog-actions"><button type="button" value="cancel" class="secondary">Abbrechen</button><button value="default" class="primary">Speichern</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="externalInfoDialog">
+    <div class="dialog-form storage-info-dialog">
+      <h2>Dateiinformationen</h2>
+      <dl class="storage-info-list">
+        <div><dt>Name</dt><dd id="externalInfoName">–</dd></div>
+        <div><dt>Typ</dt><dd id="externalInfoType">–</dd></div>
+        <div><dt>Größe</dt><dd id="externalInfoSize">–</dd></div>
+        <div><dt>Hinzugefügt</dt><dd id="externalInfoDate">–</dd></div>
+        <div><dt>Speicher</dt><dd>Verschlüsselte .safebase-Tresordatei</dd></div>
+      </dl>
+      <div class="dialog-actions"><button id="externalInfoCloseBtn" type="button" class="primary">Fertig</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="externalPreviewDialog" class="image-preview-dialog">
+    <div class="image-preview-shell">
+      <div class="image-preview-head"><strong id="externalPreviewName">Foto</strong><button id="closeExternalPreviewBtn" type="button" class="secondary compact">Schließen</button></div>
+      <img id="externalPreviewImage" class="image-preview-full" alt="Entschlüsselte Vorschau" />
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast hidden" role="status"></div>
+  <script src="app.js?v=5.6.5" defer></script>
+</body>
+</html>
